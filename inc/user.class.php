@@ -49,7 +49,7 @@ class PluginTelegrambotUser extends CommonDBTM {
    }
 
    static public function item_add_user(User $item) {
-       if (isset($item->input['telegram_username'])) {
+      if ($item->input['telegram_username']) {
          $user = new self;
          $user->fields['id'] = $item->fields['id'];
          $user->fields['username'] = $item->input['telegram_username'];
@@ -64,10 +64,8 @@ class PluginTelegrambotUser extends CommonDBTM {
       if ($user->isNewItem()) {
          self::item_add_user($item);
       } else {
- if (isset($item->input['telegram_username'])) {
          $user->fields['username'] = $item->input['telegram_username'];
          $user->updateInDB(array('username'));
-}
       }
    }
 

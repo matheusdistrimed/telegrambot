@@ -27,8 +27,6 @@
  */
 
 define('PLUGIN_TELEGRAMBOT_VERSION', '3.0.0');
-define('PLUGIN_TELEGRAMBOT_MIN_GLPI','9.5.0');
-define('PLUGIN_TELEGRAMBOT_MAX_GLPI','9.6');
 
 /**
  * Init hooks of the plugin.
@@ -68,12 +66,7 @@ function plugin_version_telegrambot() {
       'author'         => '<a href="http://trulymanager.com" target="_blank">Truly Systems</a>',
       'license'        => 'GPLv2+',
       'homepage'       => 'https://github.com/pluginsGLPI/telegrambot',
-      'requirements' => [
-    	    'glpi' => [
-    		    'min' => PLUGIN_TELEGRAMBOT_MIN_GLPI,
-    		    'max' => PLUGIN_TELEGRAMBOT_MAX_GLPI,
-    		]
-    		]
+      'minGlpiVersion' => '9.2'
    ];
 }
 
