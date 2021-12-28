@@ -28,6 +28,7 @@
 
 require GLPI_ROOT . '/plugins/telegrambot/vendor/autoload.php';
 use Longman\TelegramBot\Request;
+use GuzzleHttp\Client;
 
 class PluginTelegrambotBot {
 
@@ -40,11 +41,27 @@ class PluginTelegrambotBot {
    }
 
    static public function sendMessage($to, $content) {
-      $chat_id = self::getChatID($to);
-      $telegram = self::getTelegramInstance();
-      $result = Request::sendMessage(['chat_id' => $chat_id, 'text' => $content]);
+      global $DB;
+      if (!$test_conn) {
+         $logfile = GLPI_LOG_DIR."/telegrambot.log";
+         if (!file_exists($logfile)) {
+            $newfile = fopen($logfile, 'w+');
+            fclose($newfile); 
+         }
+         error_log(date("Y-m-d H:i:s")." - ERROR: Telegram API is unavailable now!\n", 3, $logfile);
+         return;
+      } else {
+         Request::sendMessage(['chat_id' => $chat_id, 'text' => $content,'parse_mode'=>'Markdown']);
+         $chat_id = self::getChatID($to);
+         $result = Request::sendMessage(['chat_id' => $chat_id, 'text' => $content]);
+      }
    }
 
+   static public function setTelegramBot() {
+       $telegram = self::getTelegramInstance();
+       Request::setClient (new Client(['base_uri' => self::getConfig('base_uri'),'timeout' =>  self::getConfig('http_delay')]));
+      }
+                              
    static public function getUpdates() {
       $response = 'ok';
 
@@ -65,16 +82,17 @@ class PluginTelegrambotBot {
       $chat_id = null;
 
       $result = $DB->request([
-         'FROM' => 'glpi_plugin_telegrambot_users',
+         'SELECT' => 'users.username`,`user.id',
+         'FROM' => 'glpi_plugin_telegrambot_users as users',
          'INNER JOIN' => [
-            'glpi_plugin_telegrambot_user' => [
+            'glpi_plugin_telegrambot_user as user' => [
                'FKEY' => [
-                  'glpi_plugin_telegrambot_users' => 'username',
-                  'glpi_plugin_telegrambot_user' => 'username'
+                  'users' => 'username',
+                  'user' => 'username'
                ]
             ]
          ],
-         'WHERE' => ['glpi_plugin_telegrambot_users.id' => $user_id]
+         'WHERE' => ['users.id' => $user_id]
       ]);
 
       if ($row = $result->next()) {
@@ -87,8 +105,9 @@ class PluginTelegrambotBot {
    static private function getTelegramInstance() {
       $bot_api_key  = self::getConfig('token');
       $bot_username = self::getConfig('bot_username');
-
-      return new Longman\TelegramBot\Telegram($bot_api_key, $bot_username);
+      $telegrambotLongman = new Longman\TelegramBot\Telegram($bot_api_key, $bot_username);
+     
+      return $telegrambotLongman;
    }
 
    static private function getDBCredentials() {
@@ -101,5 +120,20 @@ class PluginTelegrambotBot {
          'database' => $DB->dbdefault,
       );
    }
+
+   static private function isSiteAvailable($url, $timeout) {
+      if(!filter_var($url, FILTER_VALIDATE_URL)){
+        return false;
+      }
+
+      $curlInit = curl_init($url);
+      curl_setopt($curlInit,CURLOPT_CONNECTTIMEOUT,$timeout);
+      curl_setopt($curlInit,CURLOPT_HEADER,true);
+      curl_setopt($curlInit,CURLOPT_NOBODY,true);
+      curl_setopt($curlInit,CURLOPT_RETURNTRANSFER,true);
+      $response = curl_exec($curlInit);
+      curl_close($curlInit);
+      return $response ? true : false;
+    }
 
 }
